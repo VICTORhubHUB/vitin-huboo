@@ -1,0 +1,149 @@
+-- Vitin Hub Mobile – Painel mínimo: Super Pulo + ESP persistente + Minimizar
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+local root = char:WaitForChild("HumanoidRootPart")
+
+local jumpAtivo = false
+local espAtivo = false
+local espBoxes = {}
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+-- Painel principal
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0,180,0,120)
+Frame.Position = UDim2.new(0.1,0,0.3,0)
+Frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+Frame.Active = true
+Frame.Draggable = true
+Instance.new("UICorner", Frame)
+
+-- Botão Super Pulo
+local jumpBtn = Instance.new("TextButton", Frame)
+jumpBtn.Size = UDim2.new(0,160,0,40)
+jumpBtn.Position = UDim2.new(0,10,0,10)
+jumpBtn.Text = "Super Pulo OFF"
+jumpBtn.BackgroundColor3 = Color3.fromRGB(55,55,55)
+jumpBtn.TextColor3 = Color3.new(1,1,1)
+
+-- Botão ESP
+local espBtn = Instance.new("TextButton", Frame)
+espBtn.Size = UDim2.new(0,160,0,40)
+espBtn.Position = UDim2.new(0,10,0,55)
+espBtn.Text = "ESP OFF"
+espBtn.BackgroundColor3 = Color3.fromRGB(55,55,55)
+espBtn.TextColor3 = Color3.new(1,1,1)
+
+-- Botão minimizar
+local minBtn = Instance.new("TextButton", Frame)
+minBtn.Size = UDim2.new(0,25,0,25)
+minBtn.Position = UDim2.new(1,-30,0,5)
+minBtn.Text = "-"
+minBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+
+-- Botão emoji quando minimizado
+local EmojiButton = Instance.new("TextButton", ScreenGui)
+EmojiButton.Size = UDim2.new(0,50,0,50)
+EmojiButton.Position = UDim2.new(0.1,0,0.8,0)
+EmojiButton.Text = "🥷"
+EmojiButton.Visible = false
+EmojiButton.BackgroundColor3 = Color3.fromRGB(35,35,35)
+
+-- Minimizar
+minBtn.MouseButton1Click:Connect(function()
+    Frame.Visible = false
+    EmojiButton.Visible = true
+end)
+
+EmojiButton.MouseButton1Click:Connect(function()
+    Frame.Visible = true
+    EmojiButton.Visible = false
+end)
+
+-- Toggle Super Pulo
+jumpBtn.MouseButton1Click:Connect(function()
+    jumpAtivo = not jumpAtivo
+    jumpBtn.Text = jumpAtivo and "Super Pulo ON" or "Super Pulo OFF"
+end)
+
+-- Toggle ESP
+espBtn.MouseButton1Click:Connect(function()
+    espAtivo = not espAtivo
+    espBtn.Text = espAtivo and "ESP ON" or "ESP OFF"
+    if not espAtivo then
+        for _,box in pairs(espBoxes) do box:Destroy() end
+        espBoxes = {}
+    end
+end)
+
+-- Função criar ESP box
+local function criarESP(player)
+    -- Remove box antiga se existir
+    if espBoxes[player] then
+        espBoxes[player]:Destroy()
+        espBoxes[player] = nil
+    end
+    -- Checa se o humanoidRootPart existe
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local box = Instance.new("BoxHandleAdornment")
+        box.Adornee = player.Character.HumanoidRootPart
+        box.Size = Vector3.new(2,3,1)
+        box.Color3 = Color3.fromRGB(0,255,0)
+        box.AlwaysOnTop = true
+        box.ZIndex = 10
+        box.Parent = player.Character.HumanoidRootPart
+        espBoxes[player] = box
+    end
+end
+
+-- Conectar ESP para todos os players e recriar quando mudarem de character
+local function monitorPlayer(player)
+    player.CharacterAdded:Connect(function(c)
+        if espAtivo then
+            wait(0.1) -- espera humanoidRootPart
+            criarESP(player)
+        end
+    end)
+end
+
+for _,p in pairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        monitorPlayer(p)
+    end
+end
+
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then
+        monitorPlayer(p)
+    end
+end)
+
+-- Loop principal
+RunService.RenderStepped:Connect(function()
+    -- Super Pulo constante
+    if jumpAtivo and hum then
+        hum.UseJumpPower = true
+        hum.JumpPower = 75
+    end
+
+    -- ESP constante
+    if espAtivo then
+        for _,player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                criarESP(player)
+            end
+        end
+    end
+end)
+
+-- Atualizar após respawn
+LocalPlayer.CharacterAdded:Connect(function(c)
+    char = c
+    hum = char:WaitForChild("Humanoid")
+    root = char:WaitForChild("HumanoidRootPart")
+end)
